@@ -9,7 +9,7 @@
 
 #define NUM_THREADS 1
 #define IS_TESTED false
-#define WRITE_TO_DISK false
+#define WRITE_TO_DISK true
 #define IMAGE_SIZE 54
 
 using namespace std;
@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
     int height = bmp->height;
     int size = width * height;
 
+    // 3 colors per pixel => width * 3
     int rgbWidth = width * 3;
 
     // Create the red, green and blue layer
@@ -116,7 +117,7 @@ int main(int argc, char *argv[]) {
 
     int pixel = 0;
     // loop every row
-    // Set the position of every pixel color
+    // Set the rgb value of every pixel.
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width * 3; j += 3, pixel++) {
             red[pixel] = imgData[i * rgbWidth + j];
@@ -128,11 +129,13 @@ int main(int argc, char *argv[]) {
     double wtime = omp_get_wtime();
 
 #pragma omp parallel for default(none) shared(height, width, radius, red, green, blue) collapse(2) schedule(guided)
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    // Loop every pixel
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
             int row, col;
             double redSum = 0, greenSum = 0, blueSum = 0, weightSum = 0;
 
+            // Sum the value of every pixel in the radius of the target pixel
             for (row = i - radius; row <= i + radius; row++) {
                 for (col = j - radius; col <= j + radius; col++) {
                     int x = clampIndex(col, 0, width - 1);
@@ -150,6 +153,7 @@ int main(int argc, char *argv[]) {
                     weightSum += weight;
                 }
             }
+            // Change the value of the pixels by the calculated weight
             red[i * width + j] = round(redSum / weightSum);
             green[i * width + j] = round(greenSum / weightSum);
             blue[i * width + j] = round(blueSum / weightSum);
